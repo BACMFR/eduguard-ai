@@ -62,6 +62,9 @@ export async function getStudentFaceProfileImageBlobUrl(studentId, faceProfileId
     `/students/${studentId}/face-profiles/${faceProfileId}/image`,
     {
       responseType: "blob",
+      headers: {
+        Accept: "image/*",
+      },
     }
   );
 

@@ -34,14 +34,21 @@ class StudentFaceProfileController extends Controller
     public function image(Student $student, StudentFaceProfile $faceProfile): StreamedResponse
     {
         if ((int) $faceProfile->student_id !== (int) $student->id) {
-            abort(404);
+            abort(404, 'Face image does not belong to this student.');
         }
 
-        if (! $faceProfile->image_path || ! Storage::disk('public')->exists($faceProfile->image_path)) {
-            abort(404, 'Face image file was not found.');
+        if (! $faceProfile->image_path) {
+            abort(404, 'Face image path is empty.');
         }
 
-        return Storage::disk('public')->response($faceProfile->image_path);
+        if (! Storage::disk('public')->exists($faceProfile->image_path)) {
+            abort(404, 'Face image file was not found in storage/app/public.');
+        }
+
+        return Storage::disk('public')->response($faceProfile->image_path, null, [
+            'Cache-Control' => 'private, max-age=300',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     public function store(Request $request, Student $student): JsonResponse
@@ -109,7 +116,9 @@ class StudentFaceProfileController extends Controller
             abort(404);
         }
 
-        Storage::disk('public')->delete($faceProfile->image_path);
+        if ($faceProfile->image_path) {
+            Storage::disk('public')->delete($faceProfile->image_path);
+        }
 
         $faceProfile->delete();
 

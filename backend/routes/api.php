@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
     return response()->json([
-        'status' => 'ok',
+        'status'  => 'ok',
         'service' => 'EduGuard Laravel API',
     ]);
 });
@@ -74,6 +74,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::middleware('permission:view_students')->group(function () {
             Route::apiResource('students', StudentController::class)
                 ->only(['index', 'show']);
+
+            Route::get(
+                'students/{student}/face-profiles/{faceProfile}/image',
+                [StudentFaceProfileController::class, 'image']
+            );
 
             Route::apiResource('guardians', GuardianController::class)
                 ->only(['index', 'show']);
