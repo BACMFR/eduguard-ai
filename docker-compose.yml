@@ -1,0 +1,112 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: eduguard_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/html
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - backend
+    networks:
+      - eduguard_network
+
+  backend:
+    build:
+      context: ./docker/php
+    container_name: eduguard_backend
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    depends_on:
+      - mysql
+      - redis
+    networks:
+      - eduguard_network
+
+  queue:
+    build:
+      context: ./docker/php
+    container_name: eduguard_queue
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    command: sh -c "php artisan queue:work --verbose --tries=3 --timeout=90"
+    depends_on:
+      - backend
+      - redis
+      - mysql
+    networks:
+      - eduguard_network
+
+  scheduler:
+    build:
+      context: ./docker/php
+    container_name: eduguard_scheduler
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    command: sh -c "while true; do php artisan schedule:run --verbose --no-interaction; sleep 60; done"
+    depends_on:
+      - backend
+      - redis
+      - mysql
+    networks:
+      - eduguard_network
+
+  mysql:
+    image: mysql:8.0
+    container_name: eduguard_mysql
+    restart: unless-stopped
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_DATABASE: eduguard_db
+      MYSQL_USER: eduguard_user
+      MYSQL_PASSWORD: eduguard_password
+      MYSQL_ROOT_PASSWORD: root_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - eduguard_network
+
+  redis:
+    image: redis:alpine
+    container_name: eduguard_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - eduguard_network
+
+  frontend:
+    image: node:20-alpine
+    container_name: eduguard_frontend
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    ports:
+      - "5173:5173"
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    networks:
+      - eduguard_network
+
+  ai-service:
+    build:
+      context: ./ai-service
+    container_name: eduguard_ai_service
+    working_dir: /app
+    volumes:
+      - ./ai-service:/app
+    ports:
+      - "8000:8000"
+    networks:
+      - eduguard_network
+
+volumes:
+  mysql_data:
+
+networks:
+  eduguard_network:
+    driver: bridge
