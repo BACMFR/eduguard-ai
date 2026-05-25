@@ -18,21 +18,21 @@ html,
 body,
 #root {
   width: 100%;
-  height: 100%;
   min-height: 100%;
   margin: 0;
   padding: 0;
 }
 
 html {
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
   background: #eef2f7;
-  overflow: hidden;
+  overflow-x: hidden;
 }
 
 button,
@@ -47,24 +47,21 @@ select {
 
 .app-shell {
   width: 100%;
-  height: 100vh;
   min-height: 100vh;
+  display: flex;
   background: #eef2f7;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .sidebar {
   width: 250px;
   height: 100vh;
-  position: fixed;
-  inset: 0 auto 0 0;
-  z-index: 50;
   background: #101828;
   color: white;
   padding: 20px 16px;
+  flex-shrink: 0;
+  position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
 }
 
 .brand {
@@ -99,11 +96,13 @@ select {
 
 .nav {
   display: grid;
-  align-content: start;
   gap: 6px;
-  flex: 1 1 auto;
   min-height: 0;
-  overflow: hidden;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  padding-bottom: 92px;
 }
 
 .nav a {
@@ -116,7 +115,6 @@ select {
   text-decoration: none;
   cursor: pointer;
   font-size: 14px;
-  line-height: 1.2;
 }
 
 .nav a.active,
@@ -126,7 +124,10 @@ select {
 }
 
 .sidebar-user {
-  margin-top: auto;
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
   background: #1d2939;
   border-radius: 16px;
   padding: 12px;
@@ -135,7 +136,6 @@ select {
   align-items: center;
   gap: 10px;
   color: white;
-  flex-shrink: 0;
 }
 
 .sidebar-user strong {
@@ -170,25 +170,6 @@ select {
 /* =========================
    Main Content
 ========================= */
-
-.main-content {
-  margin-left: 250px;
-  width: calc(100% - 250px);
-  height: 100vh;
-  min-height: 0;
-  padding: 18px 22px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  background: #eef2f7;
-}
-
-.main-content.centered {
-  display: grid;
-  place-items: center;
-}
 
 .main-content {
   flex: 1;
@@ -1760,11 +1741,6 @@ td span {
     width: 220px;
   }
 
-  .main-content {
-    margin-left: 220px;
-    width: calc(100% - 220px);
-  }
-
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1821,49 +1797,6 @@ td span {
   }
 }
 
-@media (max-height: 760px) {
-  .sidebar {
-    padding: 14px 12px;
-  }
-
-  .brand {
-    margin-bottom: 12px;
-  }
-
-  .brand-icon {
-    width: 38px;
-    height: 38px;
-    border-radius: 12px;
-  }
-
-  .brand h1 {
-    font-size: 16px;
-  }
-
-  .brand p {
-    font-size: 11px;
-  }
-
-  .nav {
-    gap: 3px;
-  }
-
-  .nav a {
-    padding: 7px 10px;
-    font-size: 12px;
-  }
-
-  .sidebar-user {
-    padding: 9px;
-    border-radius: 14px;
-  }
-
-  .sidebar-user button {
-    width: 30px;
-    height: 30px;
-  }
-}
-
 @media (max-width: 700px) {
   .camera-source-tabs {
     grid-template-columns: 1fr;
@@ -1890,8 +1823,6 @@ td span {
   }
 
   .main-content {
-    margin-left: 190px;
-    width: calc(100% - 190px);
     padding: 14px;
   }
 
@@ -2204,5 +2135,208 @@ td span {
 @media (max-width: 650px) {
   .student-intervention-summary {
     grid-template-columns: 1fr;
+  }
+}
+
+
+/* =========================
+   Definitive fixed sidebar layout
+   Keep the sidebar fixed and make ONLY the outer main-content scroll.
+   This block also protects old pages that still render <main className="main-content ..."> inside Outlet.
+========================= */
+
+html,
+body,
+#root {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body {
+  min-width: 320px;
+  background: #eef2f7;
+}
+
+.app-shell {
+  width: 100% !important;
+  height: 100vh !important;
+  min-height: 100vh !important;
+  background: #eef2f7;
+  overflow: hidden !important;
+}
+
+.sidebar {
+  width: 250px !important;
+  height: 100vh !important;
+  position: fixed !important;
+  inset: 0 auto 0 0 !important;
+  z-index: 50;
+  background: #101828;
+  color: white;
+  padding: 20px 16px;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex-shrink: 0;
+}
+
+.nav {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none !important;
+  overflow: hidden !important;
+  padding-right: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.nav a {
+  min-height: 38px;
+  line-height: 1.2;
+}
+
+.sidebar-user {
+  position: static !important;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.app-shell > .main-content {
+  margin-left: 250px !important;
+  width: calc(100% - 250px) !important;
+  height: 100vh !important;
+  min-height: 0 !important;
+  padding: 18px 22px;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #eef2f7;
+}
+
+/* Compatibility layer for old pages that still return className="main-content".
+   These inner wrappers must NOT become layout containers. */
+.app-shell > .main-content .main-content {
+  margin-left: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: calc(100vh - 36px) !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+.app-shell > .main-content .main-content.centered {
+  display: grid !important;
+  place-items: center !important;
+}
+
+.dashboard-page,
+.list-page,
+.form-page,
+.details-page,
+.reports-page,
+.review-page,
+.camera-page {
+  width: 100%;
+  min-height: calc(100vh - 36px);
+  overflow: visible;
+}
+
+.chart-box,
+.report-chart-box {
+  min-height: 220px;
+}
+
+.chart-box {
+  height: 220px;
+}
+
+table {
+  min-width: 920px;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #ffffff;
+}
+
+@media (max-width: 1100px) {
+  .sidebar {
+    width: 220px !important;
+  }
+
+  .app-shell > .main-content {
+    margin-left: 220px !important;
+    width: calc(100% - 220px) !important;
+  }
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    width: 190px !important;
+    padding: 16px 12px;
+  }
+
+  .app-shell > .main-content {
+    margin-left: 190px !important;
+    width: calc(100% - 190px) !important;
+    padding: 14px;
+  }
+}
+
+@media (max-height: 760px) {
+  .sidebar {
+    padding: 14px 12px;
+  }
+
+  .brand {
+    margin-bottom: 12px;
+  }
+
+  .brand-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+
+  .brand h1 {
+    font-size: 16px;
+  }
+
+  .brand p {
+    font-size: 11px;
+  }
+
+  .nav {
+    gap: 3px;
+  }
+
+  .nav a {
+    min-height: 30px;
+    padding: 6px 9px;
+    font-size: 12px;
+  }
+
+  .sidebar-user {
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .sidebar-user button {
+    width: 30px;
+    height: 30px;
   }
 }
