@@ -59,7 +59,7 @@ export default function CreateSubjectPage() {
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Academic Management</p>
@@ -138,6 +138,6 @@ export default function CreateSubjectPage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

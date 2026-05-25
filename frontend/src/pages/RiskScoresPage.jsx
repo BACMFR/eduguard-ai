@@ -82,7 +82,7 @@ export default function RiskScoresPage() {
   }
 
   return (
-    <main className="main-content">
+    <div>
       <header className="page-header">
         <div>
           <p className="eyebrow">Early Warning System</p>
@@ -219,6 +219,6 @@ export default function RiskScoresPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

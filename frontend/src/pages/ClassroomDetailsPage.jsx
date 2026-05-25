@@ -160,22 +160,22 @@ export default function ClassroomDetailsPage() {
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p>Loading classroom details...</p>
-      </main>
+      </div>
     );
   }
 
   if (errorMessage) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p className="error-message">{errorMessage}</p>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="main-content details-page">
+    <div className="details-page classroom-details-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Classroom Management</p>
@@ -477,6 +477,6 @@ export default function ClassroomDetailsPage() {
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }

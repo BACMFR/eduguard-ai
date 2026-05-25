@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardCheck, Plus, RefreshCcw, Search } from "lucide-react";
+import {
+  ClipboardCheck,
+  Edit3,
+  Plus,
+  RefreshCcw,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { Link } from "react-router-dom";
-import { getInterventions } from "../api/interventions";
+import {
+  deleteIntervention,
+  getInterventions,
+} from "../api/interventions";
 import Can from "../components/Can";
 
 function getValue(value) {
@@ -12,11 +22,15 @@ function getLabel(value) {
   return value?.label || value?.value || value || "—";
 }
 
+function safeData(response) {
+  return Array.isArray(response?.data) ? response.data : [];
+}
+
 function PriorityBadge({ priority }) {
   const value = getValue(priority);
 
   return (
-    <span className={`priority-badge priority-${value}`}>
+    <span className={`priority-badge priority-${value || "low"}`}>
       {getLabel(priority)}
     </span>
   );
@@ -26,7 +40,7 @@ function InterventionStatusBadge({ status }) {
   const value = getValue(status);
 
   return (
-    <span className={`intervention-status-badge intervention-${value}`}>
+    <span className={`intervention-status-badge intervention-${value || "open"}`}>
       {getLabel(status)}
     </span>
   );
@@ -35,17 +49,20 @@ function InterventionStatusBadge({ status }) {
 function TypeBadge({ type }) {
   const value = getValue(type);
 
-  return <span className={`type-badge type-${value}`}>{getLabel(type)}</span>;
+  return (
+    <span className={`type-badge type-${value || "other"}`}>
+      {getLabel(type)}
+    </span>
+  );
 }
 
 export default function InterventionsPage() {
   const [interventions, setInterventions] = useState([]);
-
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedPriority, setSelectedPriority] = useState("");
-
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
 
   async function loadInterventions() {
@@ -66,8 +83,7 @@ export default function InterventionsPage() {
       }
 
       const response = await getInterventions(params);
-
-      setInterventions(response.data || []);
+      setInterventions(safeData(response));
     } catch (error) {
       console.error(error);
 
@@ -85,12 +101,45 @@ export default function InterventionsPage() {
     loadInterventions();
   }, [selectedStatus, selectedPriority]);
 
-  const filteredInterventions = useMemo(() => {
-    if (!search.trim()) {
-      return interventions;
+  async function handleDelete(intervention) {
+    const title = intervention.title || `Intervention #${intervention.id}`;
+
+    const confirmed = window.confirm(
+      `Delete "${title}"? This action cannot be undone.`
+    );
+
+    if (!confirmed) {
+      return;
     }
 
-    const keyword = search.toLowerCase();
+    try {
+      setDeletingId(intervention.id);
+      setErrorMessage("");
+
+      await deleteIntervention(intervention.id);
+
+      setInterventions((current) => {
+        return current.filter((item) => item.id !== intervention.id);
+      });
+    } catch (error) {
+      console.error(error);
+
+      if (error.response?.status === 403) {
+        setErrorMessage("You are not allowed to delete this intervention.");
+      } else {
+        setErrorMessage("Failed to delete intervention.");
+      }
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  const filteredInterventions = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
+    if (!keyword) {
+      return interventions;
+    }
 
     return interventions.filter((intervention) => {
       return (
@@ -112,7 +161,10 @@ export default function InterventionsPage() {
       open: interventions.filter((item) => getValue(item.status) === "open")
         .length,
       inProgress: interventions.filter(
-        (item) => getValue(item.status) === "in_progress",
+        (item) => getValue(item.status) === "in_progress"
+      ).length,
+      completed: interventions.filter(
+        (item) => getValue(item.status) === "completed"
       ).length,
       highPriority: interventions.filter((item) => {
         const priority = getValue(item.priority);
@@ -122,7 +174,7 @@ export default function InterventionsPage() {
   }, [interventions]);
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page interventions-compact-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Student Follow-up</p>
@@ -138,6 +190,7 @@ export default function InterventionsPage() {
             className="secondary-button"
             type="button"
             onClick={loadInterventions}
+            disabled={loading}
           >
             <RefreshCcw size={16} />
             Refresh
@@ -153,38 +206,42 @@ export default function InterventionsPage() {
       </header>
 
       <section className="intervention-summary-grid">
-        <div className="mini-stat">
+        <article className="mini-stat">
           <p>Total</p>
           <strong>{summary.total}</strong>
-        </div>
+        </article>
 
-        <div className="mini-stat">
+        <article className="mini-stat">
           <p>Open</p>
           <strong>{summary.open}</strong>
-        </div>
+        </article>
 
-        <div className="mini-stat">
+        <article className="mini-stat">
           <p>In Progress</p>
           <strong>{summary.inProgress}</strong>
-        </div>
+        </article>
 
-        <div className="mini-stat">
+        <article className="mini-stat">
+          <p>Completed</p>
+          <strong>{summary.completed}</strong>
+        </article>
+
+        <article className="mini-stat">
           <p>High / Critical</p>
           <strong>{summary.highPriority}</strong>
-        </div>
+        </article>
       </section>
 
-      <section className="panel list-panel">
-        <div className="toolbar intervention-toolbar">
-          <div className="search-box">
+      <section className="panel interventions-compact-panel">
+        <div className="intervention-toolbar interventions-compact-toolbar">
+          <label className="search-box">
             <Search size={16} />
             <input
-              type="text"
-              placeholder="Search interventions..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search by student, title, school, status..."
             />
-          </div>
+          </label>
 
           <select
             value={selectedStatus}
@@ -214,89 +271,96 @@ export default function InterventionsPage() {
         {loading ? (
           <p className="loading-text">Loading interventions...</p>
         ) : (
-          <div className="table-wrapper page-table">
-            <table>
-              <thead>
-                <tr>
-                  <th>Intervention</th>
-                  <th>Student</th>
-                  <th>School / Class</th>
-                  <th>Type</th>
-                  <th>Priority</th>
-                  <th>Status</th>
-                  <th>Due Date</th>
-                  <th>Risk</th>
-                  <th>Assigned To</th>
-                </tr>
-              </thead>
+          <div className="interventions-card-list">
+            {filteredInterventions.map((intervention) => (
+              <article className="intervention-card" key={intervention.id}>
+                <div className="intervention-card-main">
+                  <div>
+                    <p className="intervention-card-label">Intervention #{intervention.id}</p>
+                    <h3>{intervention.title}</h3>
+                  </div>
 
-              <tbody>
-                {filteredInterventions.map((intervention) => (
-                  <tr key={intervention.id}>
-                    <td>
-                      <div className="student-cell">
-                        <div className="avatar">
-                          <ClipboardCheck size={16} />
-                        </div>
+                  <div className="intervention-card-badges">
+                    <TypeBadge type={intervention.type} />
+                    <PriorityBadge priority={intervention.priority} />
+                    <InterventionStatusBadge status={intervention.status} />
+                  </div>
+                </div>
 
-                        <div>
-                          <strong>{intervention.title}</strong>
-                          <span>Intervention #{intervention.id}</span>
-                        </div>
-                      </div>
-                    </td>
+                <div className="intervention-card-grid">
+                  <div>
+                    <span>Student</span>
+                    <strong>{intervention.student?.full_name || "—"}</strong>
+                    <small>{intervention.student?.student_number || "—"}</small>
+                  </div>
 
-                    <td>
-                      <strong>{intervention.student?.full_name || "—"}</strong>
-                      <span>{intervention.student?.student_number || "—"}</span>
-                    </td>
+                  <div>
+                    <span>School / Class</span>
+                    <strong>{intervention.school?.name || "—"}</strong>
+                    <small>{intervention.classroom?.name || "—"}</small>
+                  </div>
 
-                    <td>
-                      <strong>{intervention.school?.name || "—"}</strong>
-                      <span>{intervention.classroom?.name || "—"}</span>
-                    </td>
+                  <div>
+                    <span>Due Date</span>
+                    <strong>{intervention.due_date || "—"}</strong>
+                    <small>Target follow-up date</small>
+                  </div>
 
-                    <td>
-                      <TypeBadge type={intervention.type} />
-                    </td>
+                  <div>
+                    <span>Risk</span>
+                    <strong>
+                      {intervention.risk_score
+                        ? intervention.risk_score.score
+                        : "—"}
+                    </strong>
+                    <small>
+                      {intervention.risk_score
+                        ? getLabel(intervention.risk_score.level)
+                        : "No linked score"}
+                    </small>
+                  </div>
 
-                    <td>
-                      <PriorityBadge priority={intervention.priority} />
-                    </td>
+                  <div>
+                    <span>Assigned To</span>
+                    <strong>{intervention.assigned_to?.name || "—"}</strong>
+                    <small>{intervention.assigned_to?.email || "Not assigned"}</small>
+                  </div>
+                </div>
 
-                    <td>
-                      <InterventionStatusBadge status={intervention.status} />
-                    </td>
+                <Can permission="calculate_risk_scores">
+                  <div className="intervention-card-actions">
+                    <Link
+                      className="secondary-button"
+                      to={`/interventions/${intervention.id}/edit`}
+                    >
+                      <Edit3 size={15} />
+                      Edit
+                    </Link>
 
-                    <td>{intervention.due_date || "—"}</td>
+                    <button
+                      className="danger-button"
+                      type="button"
+                      disabled={deletingId === intervention.id}
+                      onClick={() => handleDelete(intervention)}
+                    >
+                      <Trash2 size={15} />
+                      {deletingId === intervention.id ? "Deleting..." : "Delete"}
+                    </button>
+                  </div>
+                </Can>
+              </article>
+            ))}
 
-                    <td>
-                      {intervention.risk_score ? (
-                        <>
-                          <strong>{intervention.risk_score.score}</strong>
-                          <span>{getLabel(intervention.risk_score.level)}</span>
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-
-                    <td>{intervention.assigned_to?.name || "—"}</td>
-                  </tr>
-                ))}
-
-                {filteredInterventions.length === 0 && (
-                  <tr>
-                    <td colSpan="9" className="empty-cell">
-                      No interventions found.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            {filteredInterventions.length === 0 && (
+              <div className="empty-cell interventions-empty-card">
+                <ClipboardCheck size={24} />
+                <strong>No interventions found.</strong>
+                <span>Try changing the filters or add a new intervention.</span>
+              </div>
+            )}
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

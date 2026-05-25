@@ -117,7 +117,7 @@ export default function CreateUserPage() {
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Access Control</p>
@@ -291,6 +291,6 @@ export default function CreateUserPage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

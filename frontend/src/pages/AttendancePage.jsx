@@ -220,7 +220,7 @@ export default function AttendancePage() {
   }
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Attendance Management</p>
@@ -389,6 +389,6 @@ export default function AttendancePage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

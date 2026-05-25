@@ -94,7 +94,7 @@ export default function UsersPage() {
   }, [users, search]);
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Access Control</p>
@@ -221,6 +221,6 @@ export default function UsersPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

@@ -1,11 +1,15 @@
 <?php
+
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Intervention extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'student_id',
         'school_id',
@@ -23,13 +27,10 @@ class Intervention extends Model
         'outcome_notes',
     ];
 
-    protected function casts(): array
-    {
-        return [
-            'due_date'     => 'date',
-            'completed_at' => 'datetime',
-        ];
-    }
+    protected $casts = [
+        'due_date' => 'date',
+        'completed_at' => 'datetime',
+    ];
 
     public function student(): BelongsTo
     {
@@ -48,7 +49,7 @@ class Intervention extends Model
 
     public function riskScore(): BelongsTo
     {
-        return $this->belongsTo(RiskScore::class, 'risk_score_id');
+        return $this->belongsTo(StudentRiskScore::class, 'risk_score_id');
     }
 
     public function assignedUser(): BelongsTo

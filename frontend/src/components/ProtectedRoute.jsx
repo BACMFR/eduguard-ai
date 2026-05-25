@@ -6,9 +6,9 @@ export default function ProtectedRoute() {
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p>Checking authentication...</p>
-      </main>
+      </div>
     );
   }
 

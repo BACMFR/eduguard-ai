@@ -137,22 +137,22 @@ export default function SchoolDetailsPage() {
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p>Loading school details...</p>
-      </main>
+      </div>
     );
   }
 
   if (errorMessage) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p className="error-message">{errorMessage}</p>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="main-content details-page">
+    <div className="details-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">School Management</p>
@@ -465,6 +465,6 @@ export default function SchoolDetailsPage() {
           </div>
         </section>
       )}
-    </main>
+    </div>
   );
 }

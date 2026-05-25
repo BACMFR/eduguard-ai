@@ -100,7 +100,7 @@ export default function StudentsPage() {
   }, [students, search]);
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Student Management</p>
@@ -228,6 +228,6 @@ export default function StudentsPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

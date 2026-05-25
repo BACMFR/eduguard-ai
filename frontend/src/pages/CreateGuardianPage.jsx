@@ -77,7 +77,7 @@ export default function CreateGuardianPage() {
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Student Support</p>
@@ -201,6 +201,6 @@ export default function CreateGuardianPage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

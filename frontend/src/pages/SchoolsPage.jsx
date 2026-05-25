@@ -88,7 +88,7 @@ export default function SchoolsPage() {
   }, [schools, search]);
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">School Management</p>
@@ -208,6 +208,6 @@ export default function SchoolsPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

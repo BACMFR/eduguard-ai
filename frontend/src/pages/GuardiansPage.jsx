@@ -54,7 +54,7 @@ export default function GuardiansPage() {
   }, [guardians, search]);
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Student Support</p>
@@ -158,6 +158,6 @@ export default function GuardiansPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

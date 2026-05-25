@@ -3,10 +3,11 @@ import {
   ArrowLeft,
   BookOpenCheck,
   CalendarDays,
+  Camera,
   IdCard,
+  Plus,
   ShieldAlert,
   UserRound,
-  Camera,
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -15,44 +16,8 @@ import {
   getStudent,
   getStudentAttendanceHistory,
 } from "../api/students";
-import { useAuth } from "../context/AuthContext";
 import StudentInterventionsPanel from "../components/StudentInterventionsPanel";
-
-function RiskBadge({ level }) {
-  const value = level?.value || level;
-
-  return (
-    <span className={`risk-badge risk-${value}`}>
-      {level?.label || value || "—"}
-    </span>
-  );
-}
-
-function AttendanceStatusBadge({ status }) {
-  const value = status?.value || status;
-
-  return (
-    <span className={`attendance-status-badge attendance-status-${value}`}>
-      {status?.label || value || "—"}
-    </span>
-  );
-}
-
-function InfoCard({ title, value, subtitle, icon: Icon }) {
-  return (
-    <div className="info-card">
-      <div className="info-card-icon">
-        <Icon size={20} />
-      </div>
-
-      <div>
-        <p>{title}</p>
-        <strong>{value}</strong>
-        {subtitle && <span>{subtitle}</span>}
-      </div>
-    </div>
-  );
-}
+import { useAuth } from "../context/AuthContext";
 
 function getTodayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -62,141 +27,235 @@ function getWeekStartDate() {
   const date = new Date();
   const day = date.getDay();
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-
   date.setDate(diff);
-
   return date.toISOString().slice(0, 10);
+}
+
+function getValue(value) {
+  return value?.value || value || "";
+}
+
+function getLabel(value) {
+  return value?.label || value?.value || value || "—";
+}
+
+function safeArray(response) {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.data?.data)) return response.data.data;
+  return [];
+}
+
+function hasFaceProfile(student) {
+  return Boolean(
+    student?.face_registered ||
+      student?.has_face_profile ||
+      student?.face_profile_exists ||
+      student?.face_profiles_count > 0 ||
+      student?.faceProfile ||
+      student?.face_profile?.id ||
+      student?.face_profiles?.length
+  );
+}
+
+function RiskBadge({ level }) {
+  const value = getValue(level);
+  return (
+    <span className={`risk-badge risk-${value || "low"}`}>
+      {getLabel(level)}
+    </span>
+  );
+}
+
+function AttendanceStatusBadge({ status }) {
+  const value = getValue(status);
+  return (
+    <span className={`attendance-status-badge attendance-status-${value || "absent"}`}>
+      {getLabel(status)}
+    </span>
+  );
+}
+
+function InfoCard({ title, value, subtitle, icon: Icon }) {
+  return (
+    <article className="info-card">
+      <div className="info-card-icon">
+        <Icon size={20} />
+      </div>
+      <div>
+        <p>{title}</p>
+        <strong>{value}</strong>
+        {subtitle && <span>{subtitle}</span>}
+      </div>
+    </article>
+  );
 }
 
 export default function StudentDetailsPage() {
   const { id } = useParams();
   const { hasPermission } = useAuth();
 
-  const canViewGrades = hasPermission("view_grades");
-  const canViewRiskScores = hasPermission("view_risk_scores");
-  const canViewAttendance = hasPermission("view_attendance");
-  const canManageStudents = hasPermission("manage_students");
+  function can(permission) {
+    return typeof hasPermission === "function" && hasPermission(permission);
+  }
+
+  const canViewGrades = can("view_grades");
+  const canViewRiskScores = can("view_risk_scores");
+  const canViewAttendance = can("view_attendance");
+  const canManageStudents = can("manage_students");
+  const canManageInterventions = can("calculate_risk_scores");
 
   const [student, setStudent] = useState(null);
   const [grades, setGrades] = useState([]);
   const [riskScores, setRiskScores] = useState([]);
   const [attendanceReport, setAttendanceReport] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    async function loadStudentDetails() {
-      try {
-        setLoading(true);
-        setErrorMessage("");
+  async function loadStudentDetails() {
+    try {
+      setLoading(true);
+      setErrorMessage("");
 
-        const requests = [getStudent(id)];
+      const studentRequest = getStudent(id).catch((error) => {
+        console.error("Student details failed:", error);
+        throw error;
+      });
 
-        if (canViewGrades) {
-          requests.push(
-            getGrades({
-              student_id: id,
-              per_page: 20,
-            }),
-          );
-        } else {
-          requests.push(Promise.resolve({ data: [] }));
-        }
+      const gradesRequest = canViewGrades
+        ? getGrades({ student_id: id, per_page: 20 }).catch((error) => {
+            console.error("Grades failed:", error);
+            return { data: [] };
+          })
+        : Promise.resolve({ data: [] });
 
-        if (canViewRiskScores) {
-          requests.push(
-            getRiskScores({
-              student_id: id,
-              per_page: 20,
-            }),
-          );
-        } else {
-          requests.push(Promise.resolve({ data: [] }));
-        }
+      const risksRequest = canViewRiskScores
+        ? getRiskScores({ student_id: id, per_page: 20 }).catch((error) => {
+            console.error("Risk scores failed:", error);
+            return { data: [] };
+          })
+        : Promise.resolve({ data: [] });
 
-        if (canViewAttendance) {
-          requests.push(
-            getStudentAttendanceHistory(id, {
-              date_from: getWeekStartDate(),
-              date_to: getTodayDate(),
-            }),
-          );
-        } else {
-          requests.push(Promise.resolve(null));
-        }
+      const attendanceRequest = canViewAttendance
+        ? getStudentAttendanceHistory(id, {
+            date_from: getWeekStartDate(),
+            date_to: getTodayDate(),
+          }).catch((error) => {
+            console.error("Attendance history failed:", error);
+            return null;
+          })
+        : Promise.resolve(null);
 
-        const [
-          studentResponse,
-          gradesResponse,
-          riskResponse,
-          attendanceResponse,
-        ] = await Promise.all(requests);
+      const [
+        studentResponse,
+        gradesResponse,
+        riskResponse,
+        attendanceResponse,
+      ] = await Promise.all([
+        studentRequest,
+        gradesRequest,
+        risksRequest,
+        attendanceRequest,
+      ]);
 
-        setStudent(studentResponse);
-        setGrades(gradesResponse.data || []);
-        setRiskScores(riskResponse.data || []);
-        setAttendanceReport(attendanceResponse);
-      } catch (error) {
-        console.error(error);
+      setStudent(studentResponse);
+      setGrades(safeArray(gradesResponse));
+      setRiskScores(safeArray(riskResponse));
+      setAttendanceReport(attendanceResponse);
+    } catch (error) {
+      console.error(error);
+
+      if (error.response?.status === 404) {
+        setErrorMessage("Student was not found.");
+      } else if (error.response?.status === 403) {
+        setErrorMessage("You are not allowed to view this student.");
+      } else {
         setErrorMessage("Failed to load student details.");
-      } finally {
-        setLoading(false);
       }
+    } finally {
+      setLoading(false);
     }
+  }
 
+  useEffect(() => {
     loadStudentDetails();
   }, [id, canViewGrades, canViewRiskScores, canViewAttendance]);
 
   const averageGrade = useMemo(() => {
-    if (!grades.length) {
-      return 0;
-    }
-
+    if (!grades.length) return 0;
     const total = grades.reduce((sum, grade) => {
       return sum + Number(grade.percentage || 0);
     }, 0);
-
     return Math.round((total / grades.length) * 100) / 100;
   }, [grades]);
 
   const latestRiskScore = riskScores[0];
   const attendanceSummary = attendanceReport?.summary || {};
   const attendanceRecords = attendanceReport?.records || [];
+  const faceRegistered = hasFaceProfile(student);
+
+  const attendanceRate = useMemo(() => {
+    if (attendanceSummary.attendance_rate !== undefined) {
+      return `${attendanceSummary.attendance_rate}%`;
+    }
+
+    const total = Number(attendanceSummary.total_records || 0);
+    const present = Number(attendanceSummary.present_count || 0);
+
+    if (!total) return "0%";
+    return `${Math.round((present / total) * 100)}%`;
+  }, [attendanceSummary]);
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="details-page centered">
         <p>Loading student details...</p>
-      </main>
+      </div>
     );
   }
 
   if (errorMessage) {
     return (
-      <main className="main-content centered">
-        <p className="error-message">{errorMessage}</p>
-      </main>
+      <div className="details-page centered">
+        <section className="panel">
+          <p className="error-message">{errorMessage}</p>
+          <div className="form-actions">
+            <Link className="secondary-button" to="/students">
+              Back to Students
+            </Link>
+          </div>
+        </section>
+      </div>
     );
   }
 
   return (
-    <main className="main-content details-page">
+    <div className="details-page student-details-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Student Management</p>
-          <h2>{student?.full_name}</h2>
+          <h2>{student?.full_name || "Student"}</h2>
           <p className="page-description">
-            {student?.student_number} · {student?.school?.name || "No school"} ·{" "}
+            {student?.student_number || "—"} · {student?.school?.name || "No school"} ·{" "}
             {student?.classroom?.name || "No classroom"}
           </p>
         </div>
 
         <div className="header-actions">
+          {canManageInterventions && (
+            <Link
+              className="primary-button"
+              to={`/interventions/create?student_id=${student?.id || id}`}
+            >
+              <Plus size={16} />
+              Add Intervention
+            </Link>
+          )}
+
           {canManageStudents && (
             <Link
               className="primary-button"
-              to={`/students/${id}/face-registration`}
+              to={`/students/${student?.id || id}/face-registration`}
             >
               <Camera size={16} />
               Register Face
@@ -213,47 +272,35 @@ export default function StudentDetailsPage() {
       <section className="details-summary-grid">
         <InfoCard
           title="Student Status"
-          value={student?.status?.label || student?.status?.value || "—"}
+          value={getLabel(student?.status)}
           subtitle="current academic status"
           icon={UserRound}
         />
 
         <InfoCard
           title="Average Grade"
-          value={canViewGrades ? `${averageGrade}%` : "—"}
-          subtitle={canViewGrades ? "based on loaded grades" : "no permission"}
+          value={`${averageGrade}%`}
+          subtitle="based on loaded grades"
           icon={BookOpenCheck}
         />
 
         <InfoCard
           title="Attendance Rate"
-          value={
-            canViewAttendance
-              ? `${attendanceSummary.attendance_rate ?? 0}%`
-              : "—"
-          }
-          subtitle={
-            canViewAttendance
-              ? `${attendanceSummary.total_records ?? 0} attendance records`
-              : "no permission"
-          }
+          value={attendanceRate}
+          subtitle={`${attendanceSummary.total_records ?? 0} attendance records`}
           icon={CalendarDays}
         />
 
         <InfoCard
           title="Latest Risk"
-          value={canViewRiskScores ? (latestRiskScore?.score ?? "—") : "—"}
-          subtitle={
-            canViewRiskScores
-              ? latestRiskScore?.level?.label || "no risk score"
-              : "no permission"
-          }
+          value={latestRiskScore ? latestRiskScore.score : "—"}
+          subtitle={latestRiskScore ? getLabel(latestRiskScore.level) : "no risk score"}
           icon={ShieldAlert}
         />
 
         <InfoCard
           title="Face Profile"
-          value={student?.face_registered ? "Registered" : "Not Registered"}
+          value={faceRegistered ? "Registered" : "Not Registered"}
           subtitle="computer vision enrollment"
           icon={IdCard}
         />
@@ -291,9 +338,7 @@ export default function StudentDetailsPage() {
 
             <div>
               <span>Gender</span>
-              <strong>
-                {student?.gender?.label || student?.gender?.value || "—"}
-              </strong>
+              <strong>{getLabel(student?.gender)}</strong>
             </div>
 
             <div>
@@ -359,9 +404,7 @@ export default function StudentDetailsPage() {
               <span>Guardian Name</span>
               <strong>
                 {student.guardian.full_name ||
-                  `${student.guardian.first_name || ""} ${
-                    student.guardian.last_name || ""
-                  }`}
+                  `${student.guardian.first_name || ""} ${student.guardian.last_name || ""}`}
               </strong>
             </div>
 
@@ -391,7 +434,7 @@ export default function StudentDetailsPage() {
             </div>
           </div>
         ) : (
-          <div className="empty-cell">No guardian linked to this student.</div>
+          <p className="empty-cell">No guardian linked to this student.</p>
         )}
       </section>
 
@@ -405,7 +448,7 @@ export default function StudentDetailsPage() {
           </div>
 
           {canViewGrades ? (
-            <div className="table-wrapper details-table">
+            <div className="details-table">
               <table>
                 <thead>
                   <tr>
@@ -425,11 +468,7 @@ export default function StudentDetailsPage() {
                         <span>{grade.subject?.code || ""}</span>
                       </td>
                       <td>{grade.exam_name}</td>
-                      <td>
-                        {grade.grade_type?.label ||
-                          grade.grade_type?.value ||
-                          "—"}
-                      </td>
+                      <td>{getLabel(grade.grade_type)}</td>
                       <td>
                         <strong>{grade.percentage}%</strong>
                         <span>
@@ -442,7 +481,7 @@ export default function StudentDetailsPage() {
 
                   {grades.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="empty-cell">
+                      <td className="empty-cell" colSpan="5">
                         No grades found for this student.
                       </td>
                     </tr>
@@ -451,9 +490,7 @@ export default function StudentDetailsPage() {
               </table>
             </div>
           ) : (
-            <div className="empty-cell">
-              You do not have permission to view grades.
-            </div>
+            <p className="scope-note">You do not have permission to view grades.</p>
           )}
         </div>
 
@@ -466,7 +503,7 @@ export default function StudentDetailsPage() {
           </div>
 
           {canViewRiskScores ? (
-            <div className="table-wrapper details-table">
+            <div className="details-table">
               <table>
                 <thead>
                   <tr>
@@ -487,15 +524,15 @@ export default function StudentDetailsPage() {
                         <RiskBadge level={risk.level} />
                       </td>
                       <td>
-                        {risk.calculated_from} → {risk.calculated_to}
+                        {risk.calculated_from || "—"} → {risk.calculated_to || "—"}
                       </td>
-                      <td>{risk.summary}</td>
+                      <td>{risk.summary || "—"}</td>
                     </tr>
                   ))}
 
                   {riskScores.length === 0 && (
                     <tr>
-                      <td colSpan="4" className="empty-cell">
+                      <td className="empty-cell" colSpan="4">
                         No risk scores found for this student.
                       </td>
                     </tr>
@@ -504,14 +541,12 @@ export default function StudentDetailsPage() {
               </table>
             </div>
           ) : (
-            <div className="empty-cell">
-              You do not have permission to view risk scores.
-            </div>
+            <p className="scope-note">You do not have permission to view risk scores.</p>
           )}
         </div>
       </section>
 
-      {canViewRiskScores && <StudentInterventionsPanel studentId={id} />}
+      {canViewRiskScores && <StudentInterventionsPanel studentId={student?.id || id} />}
 
       <section className="panel">
         <div className="panel-header">
@@ -519,39 +554,39 @@ export default function StudentDetailsPage() {
             <h3>Attendance History</h3>
             <p>Student-level attendance history from recorded sessions.</p>
           </div>
-          <CalendarDays size={18} />
+          <CalendarDays size={20} />
         </div>
 
         {canViewAttendance ? (
           <>
-            <section className="attendance-summary-grid">
+            <div className="attendance-summary-grid">
               <div>
-                <p>Total</p>
+                <span>Total</span>
                 <strong>{attendanceSummary.total_records ?? 0}</strong>
               </div>
 
               <div>
-                <p>Present</p>
+                <span>Present</span>
                 <strong>{attendanceSummary.present_count ?? 0}</strong>
               </div>
 
               <div>
-                <p>Absent</p>
+                <span>Absent</span>
                 <strong>{attendanceSummary.absent_count ?? 0}</strong>
               </div>
 
               <div>
-                <p>Late</p>
+                <span>Late</span>
                 <strong>{attendanceSummary.late_count ?? 0}</strong>
               </div>
 
               <div>
-                <p>Excused</p>
+                <span>Excused</span>
                 <strong>{attendanceSummary.excused_count ?? 0}</strong>
               </div>
-            </section>
+            </div>
 
-            <div className="table-wrapper details-table">
+            <div className="details-table">
               <table>
                 <thead>
                   <tr>
@@ -581,17 +616,9 @@ export default function StudentDetailsPage() {
                         <AttendanceStatusBadge status={record.status} />
                       </td>
 
-                      <td>
-                        {record.detection_method?.label ||
-                          record.detection_method?.value ||
-                          "—"}
-                      </td>
+                      <td>{getLabel(record.detection_method)}</td>
 
-                      <td>
-                        {record.review_status?.label ||
-                          record.review_status?.value ||
-                          "—"}
-                      </td>
+                      <td>{getLabel(record.review_status)}</td>
 
                       <td>{record.notes || "—"}</td>
                     </tr>
@@ -599,7 +626,7 @@ export default function StudentDetailsPage() {
 
                   {attendanceRecords.length === 0 && (
                     <tr>
-                      <td colSpan="6" className="empty-cell">
+                      <td className="empty-cell" colSpan="6">
                         No attendance history found for this student.
                       </td>
                     </tr>
@@ -609,11 +636,11 @@ export default function StudentDetailsPage() {
             </div>
           </>
         ) : (
-          <div className="empty-cell">
+          <p className="scope-note">
             You do not have permission to view attendance history.
-          </div>
+          </p>
         )}
       </section>
-    </main>
+    </div>
   );
 }

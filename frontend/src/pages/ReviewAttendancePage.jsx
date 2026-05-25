@@ -260,22 +260,22 @@ export default function ReviewAttendancePage() {
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p>Loading attendance review...</p>
-      </main>
+      </div>
     );
   }
 
   if (errorMessage && !session) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p className="error-message">{errorMessage}</p>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="main-content review-page">
+    <div className="review-page">
       <header className="page-header compact-header">
         <div>
           <p className="eyebrow">Attendance Review</p>
@@ -521,6 +521,6 @@ export default function ReviewAttendancePage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

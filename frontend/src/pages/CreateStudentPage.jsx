@@ -122,7 +122,7 @@ export default function CreateStudentPage() {
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Student Management</p>
@@ -324,6 +324,6 @@ export default function CreateStudentPage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

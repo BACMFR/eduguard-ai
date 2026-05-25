@@ -2,14 +2,19 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\AttendanceRecord;
 use App\Models\AttendanceSession;
 use App\Models\Classroom;
 use App\Models\District;
 use App\Models\Grade;
+use App\Models\Guardian;
 use App\Models\Governorate;
-use App\Models\RiskScore;
+use App\Models\Intervention;
 use App\Models\School;
 use App\Models\Student;
+use App\Models\StudentFaceProfile;
+use App\Models\StudentRiskScore;
+use App\Models\Subject;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,7 +38,8 @@ class ApplyUserScope
         }
 
         $this->validateRouteParameters($request);
-        $this->validateAndMergeRequestScope($request);
+        $this->validateRequestReferences($request);
+        $this->mergeUserScopeIntoRequest($request);
 
         return $next($request);
     }
@@ -57,22 +63,57 @@ class ApplyUserScope
 
             $scope = $this->extractScopeFromModel($model);
 
+            if (! $scope) {
+                continue;
+            }
+
             if (! $this->canAccessScope($request, $scope)) {
                 abort(403, 'You are not allowed to access this resource.');
             }
         }
     }
 
-    private function validateAndMergeRequestScope(Request $request): void
+    private function validateRequestReferences(Request $request): void
+    {
+        $this->validateReferencedModel($request, 'school_id', School::class, 'school');
+        $this->validateReferencedModel($request, 'classroom_id', Classroom::class, 'classroom');
+        $this->validateReferencedModel($request, 'student_id', Student::class, 'student');
+        $this->validateReferencedModel($request, 'guardian_id', Guardian::class, 'guardian');
+        $this->validateReferencedModel($request, 'attendance_session_id', AttendanceSession::class, 'attendance session');
+        $this->validateReferencedModel($request, 'risk_score_id', StudentRiskScore::class, 'risk score');
+        $this->validateReferencedModel($request, 'intervention_id', Intervention::class, 'intervention');
+    }
+
+    private function validateReferencedModel(Request $request, string $key, string $modelClass, string $label): void
+    {
+        if (! $request->filled($key)) {
+            return;
+        }
+
+        $model = $modelClass::query()->find($request->input($key));
+
+        if (! $model) {
+            return;
+        }
+
+        $scope = $this->extractScopeFromModel($model);
+
+        if (! $scope) {
+            return;
+        }
+
+        if (! $this->canAccessScope($request, $scope)) {
+            abort(403, "You are not allowed to access this {$label}.");
+        }
+    }
+
+    private function mergeUserScopeIntoRequest(Request $request): void
     {
         $user = $request->user();
 
-        $this->validateRequestedSchool($request);
-        $this->validateRequestedClassroom($request);
-        $this->validateRequestedStudent($request);
-
         if ($user->school_id) {
             $this->ensureSameValue($request, 'school_id', $user->school_id);
+
             $request->merge([
                 'school_id' => $user->school_id,
             ]);
@@ -82,6 +123,7 @@ class ApplyUserScope
 
         if ($user->district_id) {
             $this->ensureSameValue($request, 'district_id', $user->district_id);
+
             $request->merge([
                 'district_id' => $user->district_id,
             ]);
@@ -91,6 +133,7 @@ class ApplyUserScope
 
         if ($user->governorate_id) {
             $this->ensureSameValue($request, 'governorate_id', $user->governorate_id);
+
             $request->merge([
                 'governorate_id' => $user->governorate_id,
             ]);
@@ -108,67 +151,6 @@ class ApplyUserScope
         }
     }
 
-    private function validateRequestedSchool(Request $request): void
-    {
-        if (! $request->filled('school_id')) {
-            return;
-        }
-
-        $school = School::query()->find($request->integer('school_id'));
-
-        if (! $school) {
-            return;
-        }
-
-        $scope = $this->extractScopeFromModel($school);
-
-        if (! $this->canAccessScope($request, $scope)) {
-            abort(403, 'You are not allowed to access this school.');
-        }
-    }
-
-    private function validateRequestedClassroom(Request $request): void
-    {
-        if (! $request->filled('classroom_id')) {
-            return;
-        }
-
-        $classroom = Classroom::query()
-            ->with('school')
-            ->find($request->integer('classroom_id'));
-
-        if (! $classroom) {
-            return;
-        }
-
-        $scope = $this->extractScopeFromModel($classroom);
-
-        if (! $this->canAccessScope($request, $scope)) {
-            abort(403, 'You are not allowed to access this classroom.');
-        }
-    }
-
-    private function validateRequestedStudent(Request $request): void
-    {
-        if (! $request->filled('student_id')) {
-            return;
-        }
-
-        $student = Student::query()
-            ->with('school')
-            ->find($request->integer('student_id'));
-
-        if (! $student) {
-            return;
-        }
-
-        $scope = $this->extractScopeFromModel($student);
-
-        if (! $this->canAccessScope($request, $scope)) {
-            abort(403, 'You are not allowed to access this student.');
-        }
-    }
-
     private function resolveRouteParameter(string $name, mixed $value): mixed
     {
         if (is_object($value)) {
@@ -180,39 +162,26 @@ class ApplyUserScope
         }
 
         return match ($name) {
-            'school' => School::query()->find($value),
-
-            'district' => District::query()
-                ->with('governorate')
-                ->find($value),
-
             'governorate' => Governorate::query()->find($value),
-
-            'classroom' => Classroom::query()
-                ->with('school')
+            'district' => District::query()->with('governorate')->find($value),
+            'school' => School::query()->find($value),
+            'classroom' => Classroom::query()->with('school')->find($value),
+            'student' => Student::query()->with('school')->find($value),
+            'guardian' => Guardian::query()->find($value),
+            'attendanceSession' => AttendanceSession::query()->with('school')->find($value),
+            'attendanceRecord' => AttendanceRecord::query()
+                ->with('attendanceSession.school')
                 ->find($value),
-
-            'student' => Student::query()
-                ->with('school')
-                ->find($value),
-
-            'attendanceSession' => AttendanceSession::query()
-                ->with('school')
-                ->find($value),
-
-            'grade' => Grade::query()
-                ->with('school')
-                ->find($value),
-
-            'riskScore' => RiskScore::query()
-                ->with('school')
-                ->find($value),
-
+            'grade' => Grade::query()->with('school')->find($value),
+            'subject' => Subject::query()->find($value),
+            'riskScore' => StudentRiskScore::query()->with('school')->find($value),
+            'intervention' => Intervention::query()->with('school')->find($value),
+            'faceProfile' => StudentFaceProfile::query()->with('student.school')->find($value),
             default => null,
         };
     }
 
-    private function extractScopeFromModel(mixed $model): array
+    private function extractScopeFromModel(mixed $model): ?array
     {
         if ($model instanceof Governorate) {
             return [
@@ -243,24 +212,67 @@ class ApplyUserScope
             $model instanceof Student ||
             $model instanceof AttendanceSession ||
             $model instanceof Grade ||
-            $model instanceof RiskScore
+            $model instanceof StudentRiskScore ||
+            $model instanceof Intervention
         ) {
-            $schoolId = $model->school_id ?? null;
-            $school = $model->relationLoaded('school')
-                ? $model->school
-                : ($schoolId ? School::query()->find($schoolId) : null);
+            return $this->scopeFromSchoolId($model->school_id ?? null);
+        }
 
+        if ($model instanceof AttendanceRecord) {
+            $session = $model->relationLoaded('attendanceSession')
+                ? $model->attendanceSession
+                : AttendanceSession::query()->find($model->attendance_session_id);
+
+            return $session ? $this->extractScopeFromModel($session) : null;
+        }
+
+        if ($model instanceof StudentFaceProfile) {
+            $student = $model->relationLoaded('student')
+                ? $model->student
+                : Student::query()->find($model->student_id);
+
+            return $student ? $this->extractScopeFromModel($student) : null;
+        }
+
+        if ($model instanceof Guardian) {
+            $student = Student::query()
+                ->where('guardian_id', $model->id)
+                ->first();
+
+            return $student ? $this->extractScopeFromModel($student) : null;
+        }
+
+        /*
+         * Subjects are currently global lookup data in the schema and do not
+         * have school_id. Route access is controlled by permissions.
+         */
+        if ($model instanceof Subject) {
+            return null;
+        }
+
+        return null;
+    }
+
+    private function scopeFromSchoolId(?int $schoolId): ?array
+    {
+        if (! $schoolId) {
+            return null;
+        }
+
+        $school = School::query()->find($schoolId);
+
+        if (! $school) {
             return [
-                'governorate_id' => $school?->governorate_id,
-                'district_id' => $school?->district_id,
-                'school_id' => $school?->id ?? $schoolId,
+                'governorate_id' => null,
+                'district_id' => null,
+                'school_id' => $schoolId,
             ];
         }
 
         return [
-            'governorate_id' => null,
-            'district_id' => null,
-            'school_id' => null,
+            'governorate_id' => $school->governorate_id,
+            'district_id' => $school->district_id,
+            'school_id' => $school->id,
         ];
     }
 

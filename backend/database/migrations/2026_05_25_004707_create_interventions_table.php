@@ -8,10 +8,6 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('interventions')) {
-            return;
-        }
-
         Schema::create('interventions', function (Blueprint $table) {
             $table->id();
 
@@ -30,7 +26,7 @@ return new class extends Migration
 
             $table->foreignId('risk_score_id')
                 ->nullable()
-                ->constrained('risk_scores')
+                ->constrained('student_risk_scores')
                 ->nullOnDelete();
 
             $table->foreignId('assigned_to')
@@ -45,7 +41,6 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->text('action_plan')->nullable();
-
             $table->date('due_date')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->text('outcome_notes')->nullable();

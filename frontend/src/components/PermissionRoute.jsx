@@ -6,9 +6,9 @@ export default function PermissionRoute({ permission }) {
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p>Checking permissions...</p>
-      </main>
+      </div>
     );
   }
 

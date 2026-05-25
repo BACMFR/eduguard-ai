@@ -277,14 +277,14 @@ export default function CameraAttendancePage() {
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="centered">
         <p>Loading camera attendance...</p>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="main-content camera-page">
+    <div className="camera-page camera-attendance-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Computer Vision Attendance</p>
@@ -524,6 +524,6 @@ export default function CameraAttendancePage() {
           </form>
         </section>
       </section>
-    </main>
+    </div>
   );
 }

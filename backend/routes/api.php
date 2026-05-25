@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
     return response()->json([
-        'status'  => 'ok',
+        'status' => 'ok',
         'service' => 'EduGuard Laravel API',
     ]);
 });
@@ -33,24 +33,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/auth/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Users & Roles
-    |--------------------------------------------------------------------------
-    | تبقى خارج user.scope لأن super_admin يدير المستخدمين ونطاقاتهم.
-    */
     Route::middleware('permission:manage_users')->group(function () {
         Route::get('users/roles', [UserController::class, 'roles']);
         Route::apiResource('users', UserController::class);
     });
 
-    /*
-    |--------------------------------------------------------------------------
-    | Scoped School Data
-    |--------------------------------------------------------------------------
-    | كل ما يتعلق بالمدارس، الصفوف، الطلاب، الحضور، التقارير، العلامات،
-    | ودرجات الخطورة يخضع لنطاق المستخدم.
-    */
     Route::middleware('user.scope')->group(function () {
         Route::middleware('permission:view_schools')->group(function () {
             Route::apiResource('governorates', GovernorateController::class)
@@ -61,16 +48,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
             Route::apiResource('schools', SchoolController::class)
                 ->only(['index', 'show']);
-
-            Route::middleware('permission:view_risk_scores')->group(function () {
-                Route::apiResource('interventions', InterventionController::class)
-                    ->only(['index', 'show']);
-            });
-
-            Route::middleware('permission:calculate_risk_scores')->group(function () {
-                Route::apiResource('interventions', InterventionController::class)
-                    ->except(['index', 'show']);
-            });
         });
 
         Route::middleware('permission:manage_schools')->group(function () {
@@ -182,11 +159,17 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('risk-scores/latest', [RiskScoreController::class, 'latest']);
             Route::get('risk-scores', [RiskScoreController::class, 'index']);
             Route::get('risk-scores/{riskScore}', [RiskScoreController::class, 'show']);
+
+            Route::apiResource('interventions', InterventionController::class)
+                ->only(['index', 'show']);
         });
 
         Route::middleware('permission:calculate_risk_scores')->group(function () {
             Route::post('risk-scores/calculate', [RiskScoreController::class, 'calculate']);
             Route::post('risk-scores/calculate-bulk', [RiskScoreController::class, 'calculateBulk']);
+
+            Route::apiResource('interventions', InterventionController::class)
+                ->except(['index', 'show']);
         });
     });
 });

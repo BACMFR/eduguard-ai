@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class StudentFaceProfileController extends Controller
 {
@@ -28,6 +29,19 @@ class StudentFaceProfileController extends Controller
                 $student->load(['school', 'classroom', 'guardian'])
             ),
         ]);
+    }
+
+    public function image(Student $student, StudentFaceProfile $faceProfile): StreamedResponse
+    {
+        if ((int) $faceProfile->student_id !== (int) $student->id) {
+            abort(404);
+        }
+
+        if (! $faceProfile->image_path || ! Storage::disk('public')->exists($faceProfile->image_path)) {
+            abort(404, 'Face image file was not found.');
+        }
+
+        return Storage::disk('public')->response($faceProfile->image_path);
     }
 
     public function store(Request $request, Student $student): JsonResponse

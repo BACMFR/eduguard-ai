@@ -42,6 +42,7 @@ import CalculateRiskScorePage from "./pages/CalculateRiskScorePage";
 
 import InterventionsPage from "./pages/InterventionsPage";
 import CreateInterventionPage from "./pages/CreateInterventionPage";
+import EditInterventionPage from "./pages/EditInterventionPage";
 
 import UsersPage from "./pages/UsersPage";
 import CreateUserPage from "./pages/CreateUserPage";
@@ -76,19 +77,11 @@ export default function App() {
 
               <Route element={<PermissionRoute permission="view_classrooms" />}>
                 <Route path="/classrooms" element={<ClassroomsPage />} />
-                <Route
-                  path="/classrooms/:id"
-                  element={<ClassroomDetailsPage />}
-                />
+                <Route path="/classrooms/:id" element={<ClassroomDetailsPage />} />
               </Route>
 
-              <Route
-                element={<PermissionRoute permission="manage_classrooms" />}
-              >
-                <Route
-                  path="/classrooms/create"
-                  element={<CreateClassroomPage />}
-                />
+              <Route element={<PermissionRoute permission="manage_classrooms" />}>
+                <Route path="/classrooms/create" element={<CreateClassroomPage />} />
               </Route>
 
               <Route element={<PermissionRoute permission="view_students" />}>
@@ -98,43 +91,25 @@ export default function App() {
               </Route>
 
               <Route element={<PermissionRoute permission="manage_students" />}>
-                <Route
-                  path="/students/create"
-                  element={<CreateStudentPage />}
-                />
-
+                <Route path="/students/create" element={<CreateStudentPage />} />
                 <Route
                   path="/students/:id/face-registration"
                   element={<StudentFaceRegistrationPage />}
                 />
-
-                <Route
-                  path="/guardians/create"
-                  element={<CreateGuardianPage />}
-                />
+                <Route path="/guardians/create" element={<CreateGuardianPage />} />
               </Route>
 
               <Route element={<PermissionRoute permission="view_attendance" />}>
                 <Route path="/attendance" element={<AttendancePage />} />
               </Route>
 
-              <Route
-                element={<PermissionRoute permission="manage_attendance" />}
-              >
+              <Route element={<PermissionRoute permission="manage_attendance" />}>
                 <Route
                   path="/attendance/create"
                   element={<CreateAttendanceSessionPage />}
                 />
-
-                <Route
-                  path="/attendance/camera"
-                  element={<CameraAttendancePage />}
-                />
-
-                <Route
-                  path="/attendance/:id/review"
-                  element={<ReviewAttendancePage />}
-                />
+                <Route path="/attendance/camera" element={<CameraAttendancePage />} />
+                <Route path="/attendance/:id/review" element={<ReviewAttendancePage />} />
               </Route>
 
               <Route element={<PermissionRoute permission="view_grades" />}>
@@ -143,11 +118,7 @@ export default function App() {
               </Route>
 
               <Route element={<PermissionRoute permission="manage_grades" />}>
-                <Route
-                  path="/subjects/create"
-                  element={<CreateSubjectPage />}
-                />
-
+                <Route path="/subjects/create" element={<CreateSubjectPage />} />
                 <Route path="/grades/create" element={<CreateGradePage />} />
               </Route>
 
@@ -155,24 +126,23 @@ export default function App() {
                 <Route path="/reports" element={<ReportsPage />} />
               </Route>
 
-              <Route
-                element={<PermissionRoute permission="view_risk_scores" />}
-              >
+              <Route element={<PermissionRoute permission="view_risk_scores" />}>
                 <Route path="/risk-scores" element={<RiskScoresPage />} />
                 <Route path="/interventions" element={<InterventionsPage />} />
               </Route>
 
-              <Route
-                element={<PermissionRoute permission="calculate_risk_scores" />}
-              >
+              <Route element={<PermissionRoute permission="calculate_risk_scores" />}>
                 <Route
                   path="/risk-scores/calculate"
                   element={<CalculateRiskScorePage />}
                 />
-
                 <Route
                   path="/interventions/create"
                   element={<CreateInterventionPage />}
+                />
+                <Route
+                  path="/interventions/:id/edit"
+                  element={<EditInterventionPage />}
                 />
               </Route>
 

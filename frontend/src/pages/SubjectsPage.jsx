@@ -50,7 +50,7 @@ export default function SubjectsPage() {
   }, [subjects, search]);
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Academic Management</p>
@@ -140,6 +140,6 @@ export default function SubjectsPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

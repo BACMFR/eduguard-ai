@@ -36,20 +36,22 @@ function getValidationMessages(errors) {
   return Object.values(errors).flat();
 }
 
+function safeData(response) {
+  return Array.isArray(response?.data) ? response.data : [];
+}
+
 export default function CreateInterventionPage() {
   const navigate = useNavigate();
-
   const [searchParams] = useSearchParams();
+
   const preselectedStudentId = searchParams.get("student_id") || "";
 
   const [students, setStudents] = useState([]);
   const [riskScores, setRiskScores] = useState([]);
-
   const [form, setForm] = useState(initialForm);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [errorMessage, setErrorMessage] = useState("");
   const [validationErrors, setValidationErrors] = useState([]);
 
@@ -64,8 +66,8 @@ export default function CreateInterventionPage() {
           getLatestRiskScores({ per_page: 100 }),
         ]);
 
-        const loadedStudents = studentsResponse.data || [];
-        const loadedRiskScores = riskResponse.data || [];
+        const loadedStudents = safeData(studentsResponse);
+        const loadedRiskScores = safeData(riskResponse);
 
         setStudents(loadedStudents);
         setRiskScores(loadedRiskScores);
@@ -76,7 +78,7 @@ export default function CreateInterventionPage() {
           });
 
           const latestRisk = loadedRiskScores.find((risk) => {
-            return String(risk.student?.id) === String(preselectedStudentId);
+            return String(risk.student?.id || risk.student_id) === String(preselectedStudentId);
           });
 
           const level = getValue(latestRisk?.level);
@@ -120,7 +122,7 @@ export default function CreateInterventionPage() {
     }
 
     return riskScores.filter((risk) => {
-      return String(risk.student?.id) === String(form.student_id);
+      return String(risk.student?.id || risk.student_id) === String(form.student_id);
     });
   }, [riskScores, form.student_id]);
 
@@ -150,7 +152,7 @@ export default function CreateInterventionPage() {
     const studentId = event.target.value;
 
     const latestRisk = riskScores.find((risk) => {
-      return String(risk.student?.id) === String(studentId);
+      return String(risk.student?.id || risk.student_id) === String(studentId);
     });
 
     const student = students.find((item) => {
@@ -175,8 +177,7 @@ export default function CreateInterventionPage() {
           : current.title,
       description:
         latestRisk && !current.description
-          ? latestRisk.summary ||
-            "Student requires follow-up based on latest risk score."
+          ? latestRisk.summary || "Student requires follow-up based on latest risk score."
           : current.description,
     }));
 
@@ -205,13 +206,9 @@ export default function CreateInterventionPage() {
       };
 
       await createIntervention(payload);
-
       navigate("/interventions");
     } catch (error) {
-      console.error(
-        "Intervention create error:",
-        error.response?.data || error,
-      );
+      console.error("Intervention create error:", error.response?.data || error);
 
       const errors = error.response?.data?.errors;
       const message = error.response?.data?.message;
@@ -230,31 +227,33 @@ export default function CreateInterventionPage() {
 
   if (loading) {
     return (
-      <main className="main-content centered">
+      <div className="form-page centered">
         <p>Loading intervention form...</p>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Student Follow-up</p>
           <h2>Add Intervention</h2>
           <p className="page-description">
-            Create a counseling, parent meeting, attendance follow-up, or
-            support action for an at-risk student.
+            Create a counseling, parent meeting, attendance follow-up, or support
+            action for an at-risk student.
           </p>
         </div>
 
-        <Link className="secondary-button" to="/interventions">
-          <ArrowLeft size={16} />
-          Back to Interventions
-        </Link>
+        <div className="header-actions">
+          <Link className="secondary-button" to="/interventions">
+            <ArrowLeft size={16} />
+            Back to Interventions
+          </Link>
+        </div>
       </header>
 
-      <section className="panel form-card">
+      <section className="form-card">
         <form className="clean-form" onSubmit={handleSubmit}>
           <div className="form-section">
             <h3>Student & Risk Context</h3>
@@ -269,7 +268,6 @@ export default function CreateInterventionPage() {
                   required
                 >
                   <option value="">Select student</option>
-
                   {students.map((student) => (
                     <option key={student.id} value={student.id}>
                       {student.full_name} - {student.student_number}
@@ -286,7 +284,6 @@ export default function CreateInterventionPage() {
                   onChange={handleChange}
                 >
                   <option value="">No risk score linked</option>
-
                   {selectedStudentRiskScores.map((risk) => (
                     <option key={risk.id} value={risk.id}>
                       Score {risk.score} - {getLabel(risk.level)}
@@ -317,9 +314,7 @@ export default function CreateInterventionPage() {
                   <span>Risk</span>
                   <strong>
                     {selectedRiskScore
-                      ? `${selectedRiskScore.score} - ${getLabel(
-                          selectedRiskScore.level,
-                        )}`
+                      ? `${selectedRiskScore.score} - ${getLabel(selectedRiskScore.level)}`
                       : "—"}
                   </strong>
                 </div>
@@ -330,7 +325,7 @@ export default function CreateInterventionPage() {
           <div className="form-section">
             <h3>Intervention Details</h3>
 
-            <div className="form-grid two">
+            <div className="form-grid four">
               <label>
                 Type
                 <select name="type" value={form.type} onChange={handleChange}>
@@ -338,9 +333,7 @@ export default function CreateInterventionPage() {
                   <option value="parent_meeting">Parent Meeting</option>
                   <option value="home_visit">Home Visit</option>
                   <option value="academic_support">Academic Support</option>
-                  <option value="attendance_follow_up">
-                    Attendance Follow-up
-                  </option>
+                  <option value="attendance_follow_up">Attendance Follow-up</option>
                   <option value="financial_support">Financial Support</option>
                   <option value="other">Other</option>
                 </select>
@@ -348,27 +341,17 @@ export default function CreateInterventionPage() {
 
               <label>
                 Priority
-                <select
-                  name="priority"
-                  value={form.priority}
-                  onChange={handleChange}
-                >
+                <select name="priority" value={form.priority} onChange={handleChange}>
                   <option value="low">Low</option>
                   <option value="medium">Medium</option>
                   <option value="high">High</option>
                   <option value="critical">Critical</option>
                 </select>
               </label>
-            </div>
 
-            <div className="form-grid two">
               <label>
                 Status
-                <select
-                  name="status"
-                  value={form.status}
-                  onChange={handleChange}
-                >
+                <select name="status" value={form.status} onChange={handleChange}>
                   <option value="open">Open</option>
                   <option value="in_progress">In Progress</option>
                   <option value="completed">Completed</option>
@@ -393,7 +376,7 @@ export default function CreateInterventionPage() {
                 name="title"
                 value={form.title}
                 onChange={handleChange}
-                placeholder="Counseling follow-up for attendance risk"
+                placeholder="Example: Parent meeting for attendance follow-up"
                 required
               />
             </label>
@@ -404,7 +387,7 @@ export default function CreateInterventionPage() {
                 name="description"
                 value={form.description}
                 onChange={handleChange}
-                placeholder="Explain why this intervention is needed"
+                placeholder="Describe the reason for this intervention"
                 rows="3"
               />
             </label>
@@ -458,6 +441,6 @@ export default function CreateInterventionPage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

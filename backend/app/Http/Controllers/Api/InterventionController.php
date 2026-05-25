@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\InterventionResource;
 use App\Models\Intervention;
 use App\Models\Student;
+use App\Models\StudentRiskScore;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -16,6 +17,8 @@ class InterventionController extends Controller
     {
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:255'],
+            'governorate_id' => ['nullable', 'integer', 'exists:governorates,id'],
+            'district_id' => ['nullable', 'integer', 'exists:districts,id'],
             'school_id' => ['nullable', 'integer', 'exists:schools,id'],
             'classroom_id' => ['nullable', 'integer', 'exists:classrooms,id'],
             'student_id' => ['nullable', 'integer', 'exists:students,id'],
@@ -25,7 +28,7 @@ class InterventionController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $interventions = Intervention::query()
+        $query = Intervention::query()
             ->with([
                 'student',
                 'school',
@@ -50,6 +53,16 @@ class InterventionController extends Controller
             ->when($validated['school_id'] ?? null, function ($query, int|string $schoolId) {
                 $query->where('school_id', $schoolId);
             })
+            ->when($validated['district_id'] ?? null, function ($query, int|string $districtId) {
+                $query->whereHas('school', function ($schoolQuery) use ($districtId) {
+                    $schoolQuery->where('district_id', $districtId);
+                });
+            })
+            ->when($validated['governorate_id'] ?? null, function ($query, int|string $governorateId) {
+                $query->whereHas('school', function ($schoolQuery) use ($governorateId) {
+                    $schoolQuery->where('governorate_id', $governorateId);
+                });
+            })
             ->when($validated['classroom_id'] ?? null, function ($query, int|string $classroomId) {
                 $query->where('classroom_id', $classroomId);
             })
@@ -65,19 +78,19 @@ class InterventionController extends Controller
             ->when($validated['type'] ?? null, function ($query, string $type) {
                 $query->where('type', $type);
             })
-            ->latest()
-            ->paginate($validated['per_page'] ?? 20);
+            ->latest();
 
-        return InterventionResource::collection($interventions);
+        return InterventionResource::collection(
+            $query->paginate($validated['per_page'] ?? 20)
+        );
     }
 
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'student_id' => ['required', 'integer', 'exists:students,id'],
-            'risk_score_id' => ['nullable', 'integer', 'exists:risk_scores,id'],
+            'risk_score_id' => ['nullable', 'integer', 'exists:student_risk_scores,id'],
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-
             'type' => [
                 'required',
                 Rule::in([
@@ -90,17 +103,14 @@ class InterventionController extends Controller
                     'other',
                 ]),
             ],
-
             'priority' => [
                 'required',
                 Rule::in(['low', 'medium', 'high', 'critical']),
             ],
-
             'status' => [
                 'required',
                 Rule::in(['open', 'in_progress', 'completed', 'cancelled']),
             ],
-
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'action_plan' => ['nullable', 'string', 'max:5000'],
@@ -111,6 +121,14 @@ class InterventionController extends Controller
         $student = Student::query()
             ->with('classroom')
             ->findOrFail($validated['student_id']);
+
+        if (! empty($validated['risk_score_id'])) {
+            $riskScore = StudentRiskScore::query()->findOrFail($validated['risk_score_id']);
+
+            if ((int) $riskScore->student_id !== (int) $student->id) {
+                abort(422, 'The selected risk score does not belong to the selected student.');
+            }
+        }
 
         $intervention = Intervention::query()->create([
             ...$validated,
@@ -150,7 +168,6 @@ class InterventionController extends Controller
     {
         $validated = $request->validate([
             'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
-
             'type' => [
                 'sometimes',
                 'required',
@@ -164,19 +181,16 @@ class InterventionController extends Controller
                     'other',
                 ]),
             ],
-
             'priority' => [
                 'sometimes',
                 'required',
                 Rule::in(['low', 'medium', 'high', 'critical']),
             ],
-
             'status' => [
                 'sometimes',
                 'required',
                 Rule::in(['open', 'in_progress', 'completed', 'cancelled']),
             ],
-
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],
             'action_plan' => ['nullable', 'string', 'max:5000'],
@@ -184,12 +198,14 @@ class InterventionController extends Controller
             'outcome_notes' => ['nullable', 'string', 'max:5000'],
         ]);
 
-        if (($validated['status'] ?? null) === 'completed' && ! $intervention->completed_at) {
-            $validated['completed_at'] = now();
-        }
+        if (array_key_exists('status', $validated)) {
+            if ($validated['status'] === 'completed' && ! $intervention->completed_at) {
+                $validated['completed_at'] = now();
+            }
 
-        if (($validated['status'] ?? null) !== 'completed') {
-            $validated['completed_at'] = null;
+            if ($validated['status'] !== 'completed') {
+                $validated['completed_at'] = null;
+            }
         }
 
         $intervention->update($validated);

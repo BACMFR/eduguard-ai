@@ -144,7 +144,7 @@ async def enroll_face(image: UploadFile = File(...)) -> dict[str, Any]:
 async def recognize_attendance(
     image: UploadFile = File(...),
     students: str = Form("[]"),
-    tolerance: float = Form(0.5),
+    tolerance: float = Form(0.6),
 ) -> dict[str, Any]:
     try:
         roster = json.loads(students)

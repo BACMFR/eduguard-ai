@@ -153,7 +153,7 @@ export default function CreateGradePage() {
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Academic Performance</p>
@@ -342,6 +342,6 @@ export default function CreateGradePage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }

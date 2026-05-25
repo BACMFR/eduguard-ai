@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ClipboardCheck, Plus, RefreshCcw } from "lucide-react";
+import { ClipboardCheck, Edit3, Plus, RefreshCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getStudentInterventions } from "../api/interventions";
 import Can from "./Can";
@@ -12,11 +12,15 @@ function getLabel(value) {
   return value?.label || value?.value || value || "—";
 }
 
+function safeData(response) {
+  return Array.isArray(response?.data) ? response.data : [];
+}
+
 function PriorityBadge({ priority }) {
   const value = getValue(priority);
 
   return (
-    <span className={`priority-badge priority-${value}`}>
+    <span className={`priority-badge priority-${value || "low"}`}>
       {getLabel(priority)}
     </span>
   );
@@ -26,7 +30,7 @@ function InterventionStatusBadge({ status }) {
   const value = getValue(status);
 
   return (
-    <span className={`intervention-status-badge intervention-${value}`}>
+    <span className={`intervention-status-badge intervention-${value || "open"}`}>
       {getLabel(status)}
     </span>
   );
@@ -43,8 +47,7 @@ export default function StudentInterventionsPanel({ studentId }) {
       setErrorMessage("");
 
       const response = await getStudentInterventions(studentId);
-
-      setInterventions(response.data || []);
+      setInterventions(safeData(response));
     } catch (error) {
       console.error(error);
 
@@ -91,6 +94,7 @@ export default function StudentInterventionsPanel({ studentId }) {
             className="secondary-button"
             type="button"
             onClick={loadInterventions}
+            disabled={loading}
           >
             <RefreshCcw size={16} />
             Refresh
@@ -130,12 +134,12 @@ export default function StudentInterventionsPanel({ studentId }) {
         </div>
       </div>
 
-      {errorMessage && <p className="form-error">{errorMessage}</p>}
+      {errorMessage && <p className="error-message">{errorMessage}</p>}
 
       {loading ? (
         <p className="loading-text">Loading interventions...</p>
       ) : (
-        <div className="table-wrapper student-interventions-table">
+        <div className="student-interventions-table">
           <table>
             <thead>
               <tr>
@@ -145,6 +149,7 @@ export default function StudentInterventionsPanel({ studentId }) {
                 <th>Status</th>
                 <th>Due Date</th>
                 <th>Risk</th>
+                <th>Actions</th>
               </tr>
             </thead>
 
@@ -152,16 +157,8 @@ export default function StudentInterventionsPanel({ studentId }) {
               {interventions.map((intervention) => (
                 <tr key={intervention.id}>
                   <td>
-                    <div className="student-cell">
-                      <div className="avatar">
-                        <ClipboardCheck size={16} />
-                      </div>
-
-                      <div>
-                        <strong>{intervention.title}</strong>
-                        <span>#{intervention.id}</span>
-                      </div>
-                    </div>
+                    <strong>{intervention.title}</strong>
+                    <span>#{intervention.id}</span>
                   </td>
 
                   <td>{getLabel(intervention.type)}</td>
@@ -186,12 +183,26 @@ export default function StudentInterventionsPanel({ studentId }) {
                       "—"
                     )}
                   </td>
+
+                  <td>
+                    <Can permission="calculate_risk_scores">
+                      <Link
+                        className="secondary-button"
+                        to={`/interventions/${intervention.id}/edit`}
+                      >
+                        <Edit3 size={15} />
+                        Edit
+                      </Link>
+                    </Can>
+                  </td>
                 </tr>
               ))}
 
               {interventions.length === 0 && (
                 <tr>
-                  <td colSpan="6" className="empty-cell">
+                  <td className="empty-cell" colSpan="7">
+                    <ClipboardCheck size={22} />
+                    <br />
                     No interventions linked to this student yet.
                   </td>
                 </tr>

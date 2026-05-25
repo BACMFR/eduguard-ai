@@ -114,7 +114,7 @@ export default function GradesPage() {
   }, [grades, search]);
 
   return (
-    <main className="main-content list-page">
+    <div className="list-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Academic Performance</p>
@@ -250,6 +250,6 @@ export default function GradesPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

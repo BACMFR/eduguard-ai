@@ -20,6 +20,11 @@ export async function updateIntervention(id, payload) {
   return response.data;
 }
 
+export async function deleteIntervention(id) {
+  const response = await apiClient.delete(`/interventions/${id}`);
+  return response.data;
+}
+
 export async function getStudents(params = {}) {
   const response = await apiClient.get("/students", { params });
   return response.data;

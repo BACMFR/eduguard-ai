@@ -187,7 +187,7 @@ export default function CalculateRiskScorePage() {
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Early Warning System</p>
@@ -417,6 +417,6 @@ export default function CalculateRiskScorePage() {
           )}
         </section>
       )}
-    </main>
+    </div>
   );
 }

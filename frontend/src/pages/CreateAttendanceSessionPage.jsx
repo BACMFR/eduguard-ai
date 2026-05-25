@@ -107,7 +107,7 @@ export default function CreateAttendanceSessionPage() {
   }
 
   return (
-    <main className="main-content form-page">
+    <div className="form-page">
       <header className="page-header">
         <div>
           <p className="eyebrow">Attendance Management</p>
@@ -237,6 +237,6 @@ export default function CreateAttendanceSessionPage() {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
